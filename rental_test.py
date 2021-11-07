@@ -1,41 +1,57 @@
 import unittest
-from customer import Customer
-from rental import Rental
+from datetime import datetime
+from rental import Rental, PriceCode
 from movie import Movie
 
 
 class RentalTest(unittest.TestCase):
 
     def setUp(self):
-        self.new_movie = Movie("Mulan", Movie.new_release)
-        self.regular_movie = Movie("CitizenFour", Movie.regular)
-        self.children_movie = Movie("Frozen", Movie.children)
+        self.year = datetime.now().year
+        self.new_movie = Movie("New", self.year, ["New"])
+        self.regular_movie = Movie("Regular", self.year + 1, ["Regular"])
+        self.children_movie = Movie("Children", self.year + 1, ["Children"])
 
     def test_movie_attributes(self):
         """trivial test to catch refactoring errors or change in API of Movie"""
-        m = Movie("CitizenFour", Movie.regular)
+        m = Movie("CitizenFour", self.year, ["Action"])
         self.assertEqual("CitizenFour", m.get_title())
-        self.assertEqual(Movie.regular, m.get_price_code())
 
     def test_rental_price(self):
         """test regular rent price and additional price for exceed the quota"""
-        rental = Rental(self.new_movie, 1)  # new_movie
+        rental = Rental(self.new_movie, 1, PriceCode.NEW_RELEASE)
         self.assertEqual(rental.get_price(), 3.0)
-        rental = Rental(self.new_movie, 5)  # new_movie (extra cost)
+        rental = Rental(self.new_movie, 5, PriceCode.NEW_RELEASE)
         self.assertEqual(rental.get_price(), 15.0)
-        rental = Rental(self.children_movie, 2)  # children_movie
-        self.assertEqual(rental.get_price(), 1.5)
-        rental = Rental(self.children_movie, 5)  # children_movie (extra cost)
-        self.assertEqual(rental.get_price(), 4.5)
-        rental = Rental(self.regular_movie, 1)  # regular_movie
+        rental = Rental(self.regular_movie, 1, PriceCode.REGULAR)
         self.assertEqual(rental.get_price(), 2.0)
-        rental = Rental(self.children_movie, 6)  # regular_movie (extra cost)
-        self.assertEqual(rental.get_price(), 6.0)
+        rental = Rental(self.regular_movie, 6, PriceCode.REGULAR)
+        self.assertEqual(rental.get_price(), 8.0)
+        rental = Rental(self.children_movie, 2, PriceCode.CHILDREN)
+        self.assertEqual(rental.get_price(), 1.5)
+        rental = Rental(self.children_movie, 5, PriceCode.CHILDREN)
+        self.assertEqual(rental.get_price(), 4.5)
 
     def test_rental_points(self):
-        rental = Rental(self.new_movie, 2)
+        """test frp for movie rented"""
+        rental = Rental(self.new_movie, 2, PriceCode.NEW_RELEASE)
         self.assertEqual(rental.get_frp(), 2)
-        rental = Rental(self.children_movie, 5)
+        rental = Rental(self.new_movie, 6, PriceCode.NEW_RELEASE)
+        self.assertEqual(rental.get_frp(), 6)
+        rental = Rental(self.regular_movie, 1, PriceCode.REGULAR)
         self.assertEqual(rental.get_frp(), 1)
-        rental = Rental(self.regular_movie, 1)
+        rental = Rental(self.regular_movie, 7, PriceCode.REGULAR)
         self.assertEqual(rental.get_frp(), 1)
+        rental = Rental(self.children_movie, 5, PriceCode.CHILDREN)
+        self.assertEqual(rental.get_frp(), 1)
+        rental = Rental(self.children_movie, 2, PriceCode.CHILDREN)
+        self.assertEqual(rental.get_frp(), 1)
+
+    def test_price_code_factory(self):
+        """test price code from factory method"""
+        # Price for New Release Movie
+        self.assertEqual(PriceCode.NEW_RELEASE, PriceCode.for_movie(self.new_movie))
+        # Price for Regular Movie
+        self.assertEqual(PriceCode.REGULAR, PriceCode.for_movie(self.regular_movie))
+        # Price for Children Movie
+        self.assertEqual(PriceCode.CHILDREN, PriceCode.for_movie(self.children_movie))

@@ -1,12 +1,44 @@
+from enum import Enum
+from datetime import datetime
 from movie import *
 import logging
+
+
+class PriceCode(Enum):
+    REGULAR = {
+        "price": lambda days: 2.0 + 1.5 * max(0, days - 2),
+        "frp": lambda days: 1
+    }
+    CHILDREN = {
+        "price": lambda days: 1.5 + 1.5 * max(0, days - 3),
+        "frp": lambda days: 1
+    }
+    NEW_RELEASE = {
+        "price": lambda days: 3.0 * days,
+        "frp": lambda days: days
+    }
+
+    def price(self, days_rented: int) -> float:
+        return self.value["price"](days_rented)
+
+    def frp(self, day_rented: int) -> int:
+        return self.value["frp"](day_rented)
+
+    @classmethod
+    def for_movie(self, movie: Movie):
+        """Get price code for a movie."""
+        current_year = datetime.now().year
+        if current_year == movie.get_year():
+            return PriceCode.NEW_RELEASE
+        if movie.is_genre("Children"):
+            return PriceCode.CHILDREN
+        return PriceCode.REGULAR
 
 
 class Rental:
     """
     A rental of a movie by customer.
     From Fowler's refactoring example.
-
     A realistic Rental would have fields for the dates
     that the movie was rented and returned, from which the
     rental period is calculated.
@@ -14,44 +46,28 @@ class Rental:
     field is used.
     """
 
-    def __init__(self, movie, days_rented):
+    def __init__(self, movie: Movie, days_rented: int, price_code: PriceCode):
         """Initialize a new movie rental object for
-            a movie with known rental period (daysRented).
+           a movie with known rental period (daysRented).
         """
         self.movie = movie
         self.days_rented = days_rented
+        self.price_code = price_code
 
     def get_movie(self):
         return self.movie
 
-    def get_days_rented(self):
+    def get_days_rented(self) -> int:
         return self.days_rented
 
-    def get_price(self):
-        result = 0
-        if self.get_movie().get_price_code() == Movie.regular:
-            # Two days for $2, additional days 1.50 each.
-            result += 2.0
-            if self.get_days_rented() > 2:
-                result += 1.5 * (self.get_days_rented() - 2)
-        elif self.get_movie().get_price_code() == Movie.children:
-            # Three days for $1.50, additional days 1.50 each.
-            result += 1.5
-            if self.get_days_rented() > 3:
-                result += 1.5 * (self.get_days_rented() - 3)
-        elif self.get_movie().get_price_code() == Movie.new_release:
-            # Straight per day charge
-            result += 3 * self.get_days_rented()
-        else:
+    def get_price(self) -> float:
+        total_price = 0
+        try:
+            total_price += self.price_code.price(self.days_rented)
+        except KeyError:
             log = logging.getLogger()
-            log.error(
-                f"Movie {self.get_movie()} has unrecognized priceCode {self.get_movie().get_price_code()}")
-        return result
+            log.error(f"Movie {self.get_movie()} has unrecognized priceCode {self.get_movie().get_price_code()}")
+        return total_price
 
-    def get_frp(self):
-        frequent_renter_points = 0
-        if self.get_movie().get_price_code() == Movie.new_release:
-            frequent_renter_points += self.get_days_rented()
-        else:
-            frequent_renter_points += 1
-        return frequent_renter_points
+    def get_frp(self) -> int:
+        return self.price_code.frp(self.days_rented)

@@ -1,5 +1,6 @@
-from rental import Rental
+from rental import *
 from movie import Movie
+from typing import List
 
 
 class Customer:
@@ -9,25 +10,22 @@ class Customer:
        movies rented for the current billing period,
        and can print a statement of his rentals.
     """
-
-    def __init__(self, name: str):
+    def __init__(self, name):
         """ Initialize a new customer."""
-        self.name = name
-        self.rentals = []
+        self.name: str = name
+        self.rentals: List[Rental] = []
 
     def add_rental(self, rental: Rental):
         if rental not in self.rentals:
             self.rentals.append(rental)
 
-    def get_name(self):
+    def get_name(self) -> str:
+        # function to get the value of name
         return self.name
-
-    def amount_for(self, rental):
-        return rental.get_price()
 
     def statement(self):
         """
-            Print all the rentals in current period, 
+            Print all the rentals in current period,
             along with total charges and reward points.
             Returns:
                 the statement as a String
@@ -44,13 +42,13 @@ class Customer:
             frequent_renter_points += rental.get_frp()
             #  add detail line to statement
             statement += fmt.format(rental.get_movie().get_title(), rental.get_days_rented(), rental.get_price())
-            # and accumulate activity
+            # compute rental change and accumulate activity
             total_amount += rental.get_price()
 
         # footer: summary of charges
         statement += "\n"
         statement += "{:32s} {:6s} {:6.2f}\n".format(
-            "Total Charges", "", total_amount)
+                       "Total Charges", "", total_amount)
         statement += "Frequent Renter Points earned: {}\n".format(frequent_renter_points)
 
         return statement
@@ -59,8 +57,8 @@ class Customer:
 if __name__ == "__main__":
     customer = Customer("Edward Snowden")
     print(customer.statement())
-    movie = Movie("Hacker Noon", Movie.regular)
-    customer.add_rental(Rental(movie, 2))
-    movie = Movie("CitizenFour", Movie.new_release)
-    customer.add_rental(Rental(movie, 3))
+    movie = Movie("Hacker Noon", 2000, ["Action"])
+    customer.add_rental(Rental(movie, 2, PriceCode.for_movie(movie)))
+    movie = Movie("CitizenFour", 2002, ["Action"])
+    customer.add_rental(Rental(movie, 3, PriceCode.for_movie(movie)))
     print(customer.statement())
